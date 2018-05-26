@@ -115,7 +115,7 @@ public class Server {
         ConcurrentLinkedQueue<wrapper> que = new ConcurrentLinkedQueue<>();
         ExecutorService pool = Executors.newFixedThreadPool(12);
         TimeLimiter timeLimiter = SimpleTimeLimiter.create(pool);
-        Server app = new Server("192.168.43.182");
+        Server app = new Server("10.42.0.10");
         System.out.println("\r\nRunning Server: " +
                 "Host=" + app.getSocketAddress().getHostAddress() +
                 " Port=" + app.getPort());
@@ -127,50 +127,57 @@ public class Server {
                         Thread.sleep(500);
                         if (!writers.isEmpty() && !writers.isEmpty() && !readers.isEmpty() && !Accept.isEmpty()) {
                             for (Map.Entry entry : writers.entrySet()) {
-                                PrintWriter writer = (PrintWriter) entry.getValue();
-                                BufferedReader reader = readers.get(entry.getKey());
-                                long timeDiff = timeDiffs.get(entry.getKey());
-                                currTimestamp = System.currentTimeMillis();
-                                long lastTimestamp = lasttimestamps.get(entry.getKey());
-                                if (Accept.containsKey(entry.getKey()) && status.containsKey(entry.getKey()) && (timeDiff == 0 || currTimestamp - lastTimestamp > 10 * 60000) && !status.get(entry.getKey()) && Accept.get(entry.getKey())) {
-                                    isCali.put((Socket) entry.getKey(), true);
-                                    timeDiff = 0;
-                                    lasttimestamps.put((Socket) entry.getKey(), currTimestamp);
-                                    writer.println("time");
-                                    writer.flush();
-                                    System.out.println("calibration request sent");
-                                    while (true) {
-                                        try {
-                                            String timeMSG = timeLimiter.callWithTimeout(reader::readLine, 3, TimeUnit.SECONDS);
-                                            System.out.println(timeMSG);
-                                            if (timeMSG == null || timeMSG.isEmpty()) {
-                                                continue;
-                                            }
-                                            if (timeMSG.matches(".*T")) {
-                                                timeDiff += (System.currentTimeMillis() - Long.parseLong(timeMSG.substring(0, timeMSG.length() - 1))) % 1000000;
-                                            }
-                                            if (timeMSG.equals("Q")) {
-                                                timeDiff /= 10;
-                                                timeDiffs.put((Socket) entry.getKey(), timeDiff);
-                                                isCali.put((Socket) entry.getKey(), false);
+                                if (!((Socket) entry.getKey()).isClosed()) {
+                                    PrintWriter writer = (PrintWriter) entry.getValue();
+                                    BufferedReader reader = readers.get(entry.getKey());
+                                    long timeDiff = timeDiffs.get(entry.getKey());
+                                    currTimestamp = System.currentTimeMillis();
+                                    long lastTimestamp = lasttimestamps.get(entry.getKey());
+                                    if (Accept.containsKey(entry.getKey()) && status.containsKey(entry.getKey()) && (timeDiff == 0 || currTimestamp - lastTimestamp > 0.1 * 60000) && !status.get(entry.getKey()) && Accept.get(entry.getKey())) {
+                                        isCali.put((Socket) entry.getKey(), true);
+                                        timeDiff = 0;
+                                        lasttimestamps.put((Socket) entry.getKey(), currTimestamp);
+                                        writer.println("time");
+                                        writer.flush();
+                                        System.out.println("calibration request sent");
+                                        while (true) {
+                                            try {
+                                                String timeMSG = timeLimiter.callWithTimeout(reader::readLine, 3, TimeUnit.SECONDS);
+                                                System.out.println(timeMSG);
+                                                if (timeMSG == null || timeMSG.isEmpty()) {
+                                                    ((Socket)entry.getKey()).close();
+                                                    System.out.println("closing socket...");
+                                                    break;
+                                                }
+                                                if (timeMSG.matches(".*T")) {
+                                                    timeDiff += (System.currentTimeMillis() - Long.parseLong(timeMSG.substring(0, timeMSG.length() - 1))) % 1000000;
+                                                }
+                                                if (timeMSG.equals("Q")) {
+                                                    timeDiff /= 10;
+                                                    timeDiffs.put((Socket) entry.getKey(), timeDiff);
+                                                    isCali.put((Socket) entry.getKey(), false);
+                                                    break;
+                                                }
+                                                if (timeMSG.matches(".*t")) {
+                                                    timeDiff += (System.currentTimeMillis() - Long.parseLong(timeMSG.substring(0, timeMSG.length() - 1))) % 1000000;
+                                                }
+                                                if (timeMSG.equals("q")) {
+                                                    timeDiff /= 10;
+                                                    timeDiffs.put((Socket) entry.getKey(), timeDiff);
+                                                    isCali.put((Socket) entry.getKey(), false);
+                                                    break;
+                                                }
+                                            } catch (TimeoutException | UncheckedIOException e) {
+                                                System.out.println("lost connection, closing...");
+                                                ((Socket) entry.getKey()).close();
+                                                System.out.println("closing this socket...");
                                                 break;
+                                            } catch (ExecutionException e) {
+                                                e.printStackTrace();
                                             }
-                                            if (timeMSG.matches(".*t")) {
-                                                timeDiff += (System.currentTimeMillis() - Long.parseLong(timeMSG.substring(0, timeMSG.length() - 1))) % 1000000;
-                                            }
-                                            if (timeMSG.equals("q")) {
-                                                timeDiff /= 10;
-                                                timeDiffs.put((Socket) entry.getKey(), timeDiff);
-                                                isCali.put((Socket) entry.getKey(), false);
-                                                break;
-                                            }
-                                        } catch (TimeoutException | UncheckedIOException e) {
-                                            ((Socket) entry.getKey()).close();
-                                        } catch (ExecutionException e) {
-                                            e.printStackTrace();
                                         }
+                                        System.out.println("calibration finished with difference_" + timeDiff);
                                     }
-                                    System.out.println("calibration finished with difference_" + timeDiff);
                                 }
                             }
                         }
@@ -263,6 +270,7 @@ class node_task implements Runnable {
             PrintWriter writer = new PrintWriter(new OutputStreamWriter(this.client.getOutputStream()));
             while (true) {
                 if (client.isClosed()) {
+                    System.out.println("Socket closed terminating...");
                     break;
                 }
                 if (!Server.isCali.get(client)) {
@@ -363,6 +371,7 @@ class sw_task implements Runnable {
             PrintWriter writer = new PrintWriter(new OutputStreamWriter(this.client.getOutputStream()));
             while (true) {
                 if (client.isClosed()) {
+                    System.out.println("socket closed terminating...");
                     break;
                 }
                 try {
@@ -394,6 +403,7 @@ class sw_task implements Runnable {
                                 public void run() {
                                     while (true) {
                                         if (client.isClosed()) {
+                                            System.out.println("socket closed terminating...");
                                             break;
                                         }
                                         try {
@@ -434,6 +444,7 @@ class sw_task implements Runnable {
                                 System.out.println("thread_" + "Sw" + swc + "to wait stop created");
                                 while (true) {
                                     if (client.isClosed()) {
+                                        System.out.println("Socket closed terminating...");
                                         break;
                                     }
                                     try {
