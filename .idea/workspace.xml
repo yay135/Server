@@ -1,24 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="cfa55191-1936-497c-9999-58814ac5f300" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/commons_lang3_3_7.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/xchart_3_5_2.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/Server.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Server.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Server/com/company/Sensordata$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Server/com/company/Sensordata$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Server/com/company/Sensordata.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Server/com/company/Sensordata.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Server/com/company/Server$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Server/com/company/Server$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Server/com/company/Server$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Server/com/company/Server$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Server/com/company/Server.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Server/com/company/Server.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Server/com/company/count.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Server/com/company/count.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Server/com/company/node_task.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Server/com/company/node_task.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Server/com/company/sw_task$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Server/com/company/sw_task$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Server/com/company/sw_task$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Server/com/company/sw_task$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Server/com/company/sw_task.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Server/com/company/sw_task.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Server/com/company/wrapper.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Server/com/company/wrapper.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/com/company/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/com/company/Server.java" afterDir="false" />
-    </list>
+    <list default="true" id="cfa55191-1936-497c-9999-58814ac5f300" name="Default" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -34,7 +17,7 @@
       <file leaf-file-name="Server.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/com/company/Server.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2010">
+            <state relative-caret-position="3264">
               <caret line="586" column="35" selection-start-line="586" selection-start-column="35" selection-end-line="586" selection-end-column="35" />
               <folding>
                 <element signature="imports" expanded="true" />
@@ -210,12 +193,12 @@
       <workItem from="1527648054732" duration="1346000" />
       <workItem from="1527651891748" duration="3448000" />
       <workItem from="1527659537038" duration="4375000" />
-      <workItem from="1527702259421" duration="21141000" />
+      <workItem from="1527702259421" duration="21680000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="68192000" />
+    <option name="totallyTimeSpent" value="68731000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="25" width="1920" height="1055" extended-state="6" />
@@ -230,7 +213,7 @@
       <window_info anchor="bottom" id="Event Log" order="7" side_tool="true" />
       <window_info anchor="right" id="Maven Projects" order="3" />
       <window_info anchor="bottom" id="Database Changes" order="7" show_stripe_button="false" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.13650794" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.13650794" />
       <window_info anchor="bottom" id="Version Control" order="7" />
       <window_info anchor="right" id="Coverage" side_tool="true" weight="0.329429" />
       <window_info anchor="bottom" id="Terminal" order="7" />
@@ -335,7 +318,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/com/company/Server.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2010">
+        <state relative-caret-position="3264">
           <caret line="586" column="35" selection-start-line="586" selection-start-column="35" selection-end-line="586" selection-end-column="35" />
           <folding>
             <element signature="imports" expanded="true" />
