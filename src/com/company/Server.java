@@ -5,9 +5,7 @@ import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 
 import com.google.common.util.concurrent.SimpleTimeLimiter;
@@ -16,6 +14,14 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import com.opencsv.CSVWriter;
 import com.google.gson.Gson;
+
+import javax.swing.SwingWorker;
+import org.knowm.xchart.QuickChart;
+import org.knowm.xchart.SwingWrapper;
+import org.knowm.xchart.XYChart;
+
+import org.apache.commons.lang3.ArrayUtils;
+import org.knowm.xchart.XYSeries;
 
 
 public class Server {
@@ -30,8 +36,11 @@ public class Server {
     private static Map<Socket, Boolean> Accept = new ConcurrentHashMap<>();
     public static Map<Socket, Boolean> isCali = new ConcurrentHashMap<>();
     private static Map<Socket, Long> lasttimestamps = new ConcurrentHashMap<>();
-    public static Map<InetAddress, count> allCounts = new ConcurrentHashMap<>();
-    public static Map<InetAddress, Map<String, count>> allCountMaps = new ConcurrentHashMap<>();
+    public static Map<String, count> allCounts = new ConcurrentHashMap<>();
+    public static Map<String, Map<String, count>> allCountMaps = new ConcurrentHashMap<>();
+    private static Map<String,Socket> AddressClient = new ConcurrentHashMap<>();
+    public static ConcurrentLinkedQueue<String> data0 = new ConcurrentLinkedQueue();
+    public static ConcurrentLinkedQueue<String> data1 = new ConcurrentLinkedQueue();
     private ServerSocket server;
 
     private Server(String ipAddress) throws Exception {
@@ -41,21 +50,21 @@ public class Server {
             this.server = new ServerSocket(8888, 10, InetAddress.getLocalHost());
     }
 
-    private void create(Socket client, String clientAddress, ConcurrentLinkedQueue<String> sq, int num, ExecutorService pool, ConcurrentLinkedQueue<wrapper> que) {
-        Runnable sw = new sw_task(client, clientAddress, sq, num, que);
+    private void create(String deviceId,Socket client, String clientAddress, ConcurrentLinkedQueue<String> sq, int num, ExecutorService pool, ConcurrentLinkedQueue<wrapper> que) {
+        Runnable sw = new sw_task(deviceId, client, clientAddress, sq, num, que);
         pool.execute(sw);
     }
 
-    private void create(Socket client, String clientAddress, HashSet<ConcurrentLinkedQueue<String>> Arr, ExecutorService pool, int idx, ConcurrentLinkedQueue<wrapper> que) {
+    private void create(String deviceId, Socket client, String clientAddress, HashSet<ConcurrentLinkedQueue<String>> Arr, ExecutorService pool, int idx, ConcurrentLinkedQueue<wrapper> que) {
         count cc;
-        if (allCounts.containsKey(client.getInetAddress())) {
-            cc = allCounts.get(client.getInetAddress());
+        if (allCounts.containsKey(deviceId)) {
+            cc = allCounts.get(deviceId);
         } else {
             cc = new count();
-            allCounts.put(client.getInetAddress(), cc);
+            allCounts.put(deviceId, cc);
         }
         Sensordata sd = new Sensordata();
-        Runnable node = new node_task(client, clientAddress, cc, Arr, sd, idx, que);
+        Runnable node = new node_task(deviceId, client, clientAddress, cc, Arr, sd, idx, que);
         pool.execute(node);
     }
 
@@ -82,19 +91,29 @@ public class Server {
                 String data = reader.readLine();
                 if (data == null || data.isEmpty()) {
                     continue;
-                } else if (data.matches(".*OBJ")) {
+                } else if (data.matches("OBJ.*")) {
+                    String deviceId = data.substring(4);
+                    if(AddressClient.get(deviceId)!=null){
+                        AddressClient.get(deviceId).close();
+                    }
+                    AddressClient.put(deviceId,client);
                     this.OBJcount++;
                     Accept.put(client, true);
                     Thread.sleep(2000);
-                    create(client, clientAddress, this.QueArr, pool, this.OBJcount, que);
+                    create(deviceId, client, clientAddress, this.QueArr, pool, this.OBJcount, que);
                     break;
-                } else if (data.matches(".*SWT")) {
+                } else if (data.matches("SWT.*")) {
+                    String deviceId = data.substring(4);
+                    if(AddressClient.get(deviceId)!=null){
+                        AddressClient.get(deviceId).close();
+                    }
+                    AddressClient.put(deviceId,client);
                     this.SWcount++;
                     ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
                     this.QueArr.add(queue);
                     Accept.put(client, true);
                     Thread.sleep(2000);
-                    create(client, clientAddress, queue, this.SWcount, pool, que);
+                    create(deviceId, client, clientAddress, queue, this.SWcount, pool, que);
                     break;
                 }
 
@@ -112,8 +131,16 @@ public class Server {
     }
 
     public static void main(String[] args) throws Exception {
+        SwingWorkerRealTime swrt = new SwingWorkerRealTime();
+        Runnable graph = new Runnable() {
+            @Override
+            public void run() {
+                swrt.go();
+            }
+        };
         ConcurrentLinkedQueue<wrapper> que = new ConcurrentLinkedQueue<>();
         ExecutorService pool = Executors.newFixedThreadPool(12);
+        pool.execute(graph);
         TimeLimiter timeLimiter = SimpleTimeLimiter.create(pool);
         Server app = new Server("10.42.0.10");
         System.out.println("\r\nRunning Server: " +
@@ -133,7 +160,7 @@ public class Server {
                                     long timeDiff = timeDiffs.get(entry.getKey());
                                     currTimestamp = System.currentTimeMillis();
                                     long lastTimestamp = lasttimestamps.get(entry.getKey());
-                                    if (Accept.containsKey(entry.getKey()) && status.containsKey(entry.getKey()) && (timeDiff == 0 || currTimestamp - lastTimestamp > 0.1 * 60000) && !status.get(entry.getKey()) && Accept.get(entry.getKey())) {
+                                    if (Accept.containsKey(entry.getKey()) && status.containsKey(entry.getKey()) && (timeDiff == 0 || currTimestamp - lastTimestamp > 10 * 60000) && !status.get(entry.getKey()) && Accept.get(entry.getKey())) {
                                         isCali.put((Socket) entry.getKey(), true);
                                         timeDiff = 0;
                                         lasttimestamps.put((Socket) entry.getKey(), currTimestamp);
@@ -252,8 +279,9 @@ class node_task implements Runnable {
     private HashSet<ConcurrentLinkedQueue<String>> arr;
     private int idx;
     private ConcurrentLinkedQueue<wrapper> que;
+    private String deviceId;
 
-    public node_task(Socket client, String ip, count cc, HashSet<ConcurrentLinkedQueue<String>> arr, Sensordata sd, int idx, ConcurrentLinkedQueue<wrapper> que) {
+    public node_task(String deviceId, Socket client, String ip, count cc, HashSet<ConcurrentLinkedQueue<String>> arr, Sensordata sd, int idx, ConcurrentLinkedQueue<wrapper> que) {
         this.client = client;
         this.ip = ip;
         this.cc = cc;
@@ -261,6 +289,7 @@ class node_task implements Runnable {
         this.sd = sd;
         this.idx = idx;
         this.que = que;
+        this.deviceId =deviceId;
     }
 
     public void run() {
@@ -281,7 +310,7 @@ class node_task implements Runnable {
                         Server.status.put(client, true);
                         System.out.println("received start " + String.valueOf(System.currentTimeMillis()));
                         this.cc.increment();
-                        String sign_start = "start_" + this.ip.substring(this.ip.length() - 3);
+                        String sign_start = "start_" + this.deviceId;
                         for (ConcurrentLinkedQueue<String> queue : arr) {
                             while (true) {
                                 if (queue.offer(sign_start)) {
@@ -298,7 +327,7 @@ class node_task implements Runnable {
                                 } else {
                                     if (ss.equals("E")) {
                                         System.out.println("stop in stack");
-                                        String sign_stop = "stop_" + this.ip.substring(this.ip.length() - 3);
+                                        String sign_stop = "stop_" + this.deviceId;
                                         for (ConcurrentLinkedQueue<String> queue : arr) {
                                             while (true) {
                                                 if (queue.offer(sign_stop)) {
@@ -325,6 +354,7 @@ class node_task implements Runnable {
                                         break;
                                     }
                                     this.sd.write(ss);
+                                    Server.data0.offer(ss);
                                 }
                             }
                         }
@@ -348,19 +378,21 @@ class sw_task implements Runnable {
     private int swc;
     private ExecutorService pool;
     private ConcurrentLinkedQueue<wrapper> que;
+    private String deviceId;
 
-    public sw_task(Socket client, String ip, ConcurrentLinkedQueue<String> sq, int num, ConcurrentLinkedQueue<wrapper> que) {
+    public sw_task(String deviceId, Socket client, String ip, ConcurrentLinkedQueue<String> sq, int num, ConcurrentLinkedQueue<wrapper> que) {
         this.client = client;
         this.ip = ip;
         this.sq = sq;
         this.swc = num;
         this.pool = Executors.newFixedThreadPool(10);
         this.que = que;
-        if (Server.allCountMaps.containsKey(client.getInetAddress())) {
-            this.CountMap = Server.allCountMaps.get(client.getInetAddress());
+        this.deviceId = deviceId;
+        if (Server.allCountMaps.containsKey(deviceId)) {
+            this.CountMap = Server.allCountMaps.get(deviceId);
         } else {
             this.CountMap = new ConcurrentHashMap<>();
-            Server.allCountMaps.put(client.getInetAddress(), this.CountMap);
+            Server.allCountMaps.put(deviceId, this.CountMap);
         }
     }
 
@@ -381,11 +413,9 @@ class sw_task implements Runnable {
                             System.out.println("current startcount:" + startCount);
                         }
                         String sig = this.sq.poll();
-                        String sigh = sig.substring(sig.length() - 3);
-                        Sensordata mSen = new Sensordata();
-                        if (this.SenMap.get(sigh) == null) {
-                            this.SenMap.put(sigh, mSen);
-                        }
+                        String sigh = sig.substring(6);
+                        System.out.println(sigh);
+                        this.SenMap.put(sigh, new Sensordata());
                         if (this.CountMap.get(sigh) == null) {
                             count c = new count();
                             c.increment();
@@ -422,6 +452,7 @@ class sw_task implements Runnable {
                                                         ((Sensordata) entry.getValue()).write(data);
 
                                                     }
+                                                    Server.data1.offer(data);
                                                 }
                                             }
                                         } catch (Exception e) {
@@ -538,4 +569,144 @@ class wrapper {
     String ip;
     int cc;
     String label;
+}
+
+class SwingWorkerRealTime {
+
+    MySwingWorker mySwingWorker;
+    SwingWrapper<XYChart> sw;
+    XYChart chart;
+
+    public void go() {
+        String[] names = {"randomWalk0","randomWalk1"};
+        // Create Chart
+        chart =
+                QuickChart.getChart(
+                        "LACC Real-time Curve",
+                        "Time",
+                        "LACC Value",
+                        names,
+                        new double[] {0},
+                        new double[][] {{0},{0}});
+
+        chart.getStyler().setLegendVisible(false);
+        chart.getStyler().setXAxisTicksVisible(false);
+        chart.getStyler().setDefaultSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Line);
+        chart.getStyler().setYAxisMax(10.0);
+        chart.getStyler().setYAxisMin(0.0);
+        // Show it
+        sw = new SwingWrapper<XYChart>(chart);
+        sw.displayChart();
+
+        mySwingWorker = new MySwingWorker();
+        mySwingWorker.execute();
+    }
+
+    private class MySwingWorker extends SwingWorker<Boolean, double[]> {
+        LinkedList<Double> fifo1 = new LinkedList();
+        LinkedList<Double> fifo3 = new LinkedList();
+        LinkedList<String[]>  buffer1 = new LinkedList<>();
+        LinkedList<String[]> buffer3 = new LinkedList<>();
+        Gson gson = new Gson();
+        Type colloectionType = new TypeToken<ArrayList<String[]>>() {
+        }.getType();
+        @Override
+        protected Boolean doInBackground(){
+            ArrayList<String[]> ss = new ArrayList<>();
+            ArrayList<String[]> st = new ArrayList<>();
+            String obj = null;
+            String swt = null;
+            while(!isCancelled()) {
+                if (Server.data0 != null)
+                    obj = Server.data0.poll();
+                if (Server.data1 != null)
+                    swt = Server.data1.poll();
+                if (obj != null) {
+                    try {
+                        ss = gson.fromJson(obj, colloectionType);
+                        buffer1.addAll(ss);
+                    } catch (JsonSyntaxException e) {
+                        e.printStackTrace();
+                        System.out.println("json err -> " + obj);
+                    }
+                }
+                if (swt != null) {
+                    try {
+                        st = gson.fromJson(swt, colloectionType);
+                        buffer3.addAll(st);
+                    } catch (JsonSyntaxException e) {
+                        e.printStackTrace();
+                        System.out.println("json err -> " + swt);
+                    }
+                }
+                int i = 0;
+                String[] t = null;
+                if(!buffer1.isEmpty()){
+                    t = buffer1.removeFirst();
+                }
+                if(t!=null&&t[1].equals("1")) {
+                    double x = Double.valueOf(t[2]);
+                    double y = Double.valueOf(t[3]);
+                    double z = Double.valueOf(t[4]);
+                    double value = Math.pow(x * x + y * y + z * z, 0.5);
+                    fifo1.add(value);
+                    if (fifo1.size() > 1000) {
+                        fifo1.removeFirst();
+                    }
+                }
+                i = 0;
+                String[] s = null;
+                if(!buffer3.isEmpty()){
+                   s = buffer3.removeFirst();
+                }
+                if(s!=null&&s[1].equals("1")) {
+                    // times1[i] = Double.valueOf(i);
+                    //System.out.println(times1[i]);
+                    double x = Double.valueOf(s[2]);
+                    double y = Double.valueOf(s[3]);
+                    double z = Double.valueOf(s[4]);
+                    double value = Math.pow(x * x + y * y + z * z, 0.5);
+                    fifo3.add(value);
+                    if (fifo3.size() > 1000) {
+                        fifo3.removeFirst();
+                    }
+                }
+                double[] ydata0 = new double[1000];
+                for (i = 0; i < fifo1.size(); i++) {
+                   ydata0[i]=fifo1.get(i);
+               }
+                double[] ydata1 = new double[1000];
+                for (i = 0; i < fifo3.size(); i++) {
+                    ydata1[i]=fifo3.get(i);
+                }
+                publish(ydata0);
+                publish(ydata1);
+            }
+            return true;
+        }
+
+        @Override
+        protected void process(List<double[]> chunks) {
+
+           // System.out.println("number of chunks: " + chunks.size());
+
+           // double[] xdata0 = chunks.get(chunks.size() - 1);
+            double[] ydata0 = chunks.get(chunks.size() - 1);
+           // double[] xdata1 = chunks.get(chunks.size() - 3);
+            double[] ydata1 = chunks.get(chunks.size() - 2);
+
+            chart.updateXYSeries("randomWalk0",null,ydata0, null);
+            chart.updateXYSeries("randomWalk1",null,ydata1,null);
+            sw.repaintChart();
+
+            long start = System.currentTimeMillis();
+            long duration = System.currentTimeMillis() - start;
+            try {
+                Thread.sleep(40 - duration); // 40 ms ==> 25fps
+                // Thread.sleep(400 - duration); // 40 ms ==> 2.5fps
+            } catch (InterruptedException e) {
+                System.out.println("InterruptedException occurred.");
+            }
+        }
+    }
 }

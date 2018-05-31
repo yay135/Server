@@ -10,5 +10,7 @@
     <orderEntry type="library" name="gson-2.6.2" level="project" />
     <orderEntry type="library" name="guava-23.0" level="project" />
     <orderEntry type="library" name="opencsv-4.1" level="project" />
+    <orderEntry type="library" name="xchart-3.5.2" level="project" />
+    <orderEntry type="library" name="commons-lang3-3.7" level="project" />
   </component>
 </module>
